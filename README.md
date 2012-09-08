@@ -1,2 +1,2 @@
-sassy_bunny_sublime
-===================
+Sassy Bunny Sublime Text 2 Plugin
+=================================

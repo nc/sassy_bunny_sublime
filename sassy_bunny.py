@@ -1,36 +1,37 @@
-import sublime, sublime_plugin, functools, httplib, urllib, re, threading;
+import sublime, sublime_plugin, functools, re, threading, websocket, json;
 
 class ThreadedFilePoster(threading.Thread):
-  host = "localhost:3000"
+  host = "localhost:8080"
 
-  def __init__(self, text, file_name, project_name):
+  def __init__(self, text, project_name, file_name):
     self.text         = text
     self.file_name    = file_name
-    self.project_name = project_name
+    self.project_name = project_name 
 
     threading.Thread.__init__(self)
 
   def run(self):
-    print "Posting file"
+    print "Posting file "
 
-    params = urllib.urlencode({
-      'text': self.text, 
-      'project_name': self.project_name, 
-      'file_name': self.file_name
+    ws = websocket.create_connection("ws://%s" % self.host)
+
+    msg = json.dumps({
+      'event' : "update",
+      'data' : {
+        'text': self.text, 
+        'project_name': self.project_name, 
+        'file_name': self.file_name
+      }
     })
 
-    headers = {
-      "Content-type": "application/x-www-form-urlencoded",
-      "Accept": "text/plain"
-    }
+    print "Sending %s" % msg
 
-    conn = httplib.HTTPConnection("localhost:3000")
-    conn.request("POST", "/style", params, headers)
+    ws.send(msg)
+    result = json.loads(ws.recv())
 
-    response = conn.getresponse()
-    print response.status, response.reason
+    print "Result %s" % result['event']
 
-    conn.close()
+    ws.close()
 
     print 'Posted file'
 
@@ -80,7 +81,6 @@ class SassBunny(sublime_plugin.EventListener):
   
     self.post_changes(view)
 
-  # TODO must implement
   def on_delete(self, view):
     print 'TODO: Sublime Text 2 doesn\'t have an API for deleted files, implement by storing files / dir tree and tracking missing files every so often'
 

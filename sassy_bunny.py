@@ -1,46 +1,69 @@
-import sublime, sublime_plugin, functools, re, threading, websocket, json;
+import sublime, sublime_plugin, functools, httplib, urllib, re, threading, websocket, json, Queue;
 
-class ThreadedFilePoster(threading.Thread):
+class Postman(): 
   host = "localhost:8080"
+  ws = None
 
-  def __init__(self, text, project_name, file_name):
-    self.text         = text
-    self.file_name    = file_name
-    self.project_name = project_name 
+  def worker(self):
+    while True:
+      msg = queue.get()
 
-    threading.Thread.__init__(self)
+      print 'Postman working %s' % self.socket()
 
-  def run(self):
-    print "Posting file "
+      msg_json = json.dumps(msg)
 
-    ws = websocket.create_connection("ws://%s" % self.host)
+      try:
+        self.socket().send(msg_json)
 
-    msg = json.dumps({
-      'event' : "update",
-      'data' : {
-        'text': self.text, 
-        'project_name': self.project_name, 
-        'file_name': self.file_name
-      }
-    })
+        result = self.socket().recv()
 
-    print "Sending %s" % msg
+        if result == None:
+          print 'Postman connection down'
+          self.ws = None
+        else:
+          print 'Postman got %s' % result
 
-    ws.send(msg)
-    result = json.loads(ws.recv())
+      except:
+        print 'Postman error'
 
-    print "Result %s" % result['event']
+      queue.task_done()
 
-    ws.close()
+  def start(self):
+    thread = threading.Thread(target=self.worker)
+    thread.daemon = True
+    thread.start()
 
-    print 'Posted file'
+  def reconnect(self):
+    print 'Postman reconnecting'
+
+    self.ws = websocket.create_connection("ws://%s" % self.host)
+
+  def socket(self):
+    print 'Postman socket'
+
+    try:
+      if self.ws == None:
+        self.reconnect()
+
+    except websocket.WebSocketConnectionClosedException:
+      self.reconnect()
+
+    except:
+      self.ws = None
+
+    return self.ws
+
+queue = Queue.Queue()
+postman = Postman()
+postman.start()
 
 class SassBunny(sublime_plugin.EventListener):
   pending = 0
   extension = re.compile(r'.*\.(.*)$', re.IGNORECASE)
   last_folder = re.compile(r'.*\/(.*)$', re.IGNORECASE)
   supported_file_types = ["css", "scss", "sass", "less"]
-  delay = 250
+  delay = 25
+  instant = True
   
   def handle_timeout(self, view):
     self.pending = self.pending - 1
@@ -50,9 +73,13 @@ class SassBunny(sublime_plugin.EventListener):
       self.on_idle(view)
 
   def on_modified(self, view):
-    self.pending = self.pending + 1
-    # Ask for handleTimeout to be called in 1000ms
-    sublime.set_timeout(functools.partial(self.handle_timeout, view), self.delay)
+    if self.instant:
+      self.post_changes(view)
+
+    else:
+      self.pending = self.pending + 1
+      # Ask for handleTimeout to be called in 1000ms
+      sublime.set_timeout(functools.partial(self.handle_timeout, view), self.delay)
 
   def file_extension(self, file_name):
     return re.search(self.extension, file_name).group(1) 
@@ -68,9 +95,17 @@ class SassBunny(sublime_plugin.EventListener):
       project_name = self.project_folder(view.window().folders()[0])
       file_name    = view.file_name()
 
-      thread = ThreadedFilePoster(text, project_name, file_name)
-      thread.start()
+      queue.put({
+        'event' : "update",
+        'data' : {
+          'text': text, 
+          'project_name': project_name, 
+          'file_name': file_name
+        }
+      })
 
+      sublime.status_message("[SASSY BUNNY] %s" % file_name)
+      
   def on_save(self, view):
     print 'Saved file'
 
@@ -80,8 +115,3 @@ class SassBunny(sublime_plugin.EventListener):
     print "No activity in the past %sms" % self.delay
   
     self.post_changes(view)
-
-  def on_delete(self, view):
-    print 'TODO: Sublime Text 2 doesn\'t have an API for deleted files, implement by storing files / dir tree and tracking missing files every so often'
-
-    self.delete_file(view)

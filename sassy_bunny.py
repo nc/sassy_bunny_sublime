@@ -1,7 +1,7 @@
 import sublime, sublime_plugin, functools, httplib, urllib, re, threading, websocket, json, Queue;
 
 class Postman(): 
-  host = "localhost:8080"
+  host = "localhost:4567"
   ws = None
 
   def worker(self):

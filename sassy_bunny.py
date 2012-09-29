@@ -1,4 +1,4 @@
-import sublime, sublime_plugin, functools, httplib, urllib, re, threading, websocket, json, Queue;
+import sublime, sublime_plugin, functools, httplib, urllib, re, threading, websocket, json, Queue, traceback;
 
 class Postman(): 
   host = "localhost:4567"
@@ -20,11 +20,10 @@ class Postman():
         if result == None:
           print 'Postman connection down'
           self.ws = None
-        else:
-          print 'Postman got %s' % result
 
       except:
-        print 'Postman error'
+        print 'No connection'
+        self.ws = None
 
       queue.task_done()
 
@@ -38,9 +37,10 @@ class Postman():
 
     self.ws = websocket.create_connection("ws://%s" % self.host)
 
-  def socket(self):
-    print 'Postman socket'
+    if self.ws != None:
+      print 'Postman connected' 
 
+  def socket(self):
     try:
       if self.ws == None:
         self.reconnect()
@@ -105,6 +105,7 @@ class SassBunny(sublime_plugin.EventListener):
       })
 
       sublime.status_message("[SASSY BUNNY] %s" % file_name)
+
       
   def on_save(self, view):
     print 'Saved file'

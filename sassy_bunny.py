@@ -5,6 +5,7 @@ class Postman():
   ws = None
 
   def worker(self):
+    self.reconnect()
     while True:
       msg = queue.get()
 

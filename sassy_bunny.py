@@ -4,7 +4,6 @@ class Postman():
   host = "localhost:4567"
   ws = None
   def worker(self):
-    self.reconnect()
     while True:
       msg = queue.get()
 
@@ -12,8 +11,6 @@ class Postman():
       with queue.mutex:
           while (len(queue.queue) > 0):
             queue.queue.pop()
-
-      print 'Postman working %s' % self.socket()
 
       msg_json = json.dumps(msg)
 
@@ -25,8 +22,6 @@ class Postman():
         if result == None:
           print 'Postman connection down'
           self.ws = None
-        else:
-          print result
 
       except:
         print 'No connection'

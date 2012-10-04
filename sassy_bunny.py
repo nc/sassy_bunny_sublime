@@ -4,6 +4,7 @@ class Postman():
   host = "localhost:4567"
   ws = None
   def worker(self):
+    self.reconnect()
     while True:
       msg = queue.get()
 

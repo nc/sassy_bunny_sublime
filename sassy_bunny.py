@@ -3,10 +3,14 @@ import sublime, sublime_plugin, functools, httplib, urllib, re, threading, webso
 class Postman(): 
   host = "localhost:4567"
   ws = None
-
   def worker(self):
     while True:
       msg = queue.get()
+
+      # empty the queue if we have processed the last item
+      with queue.mutex:
+          while (len(queue.queue) > 0):
+            queue.queue.pop()
 
       print 'Postman working %s' % self.socket()
 
@@ -20,6 +24,8 @@ class Postman():
         if result == None:
           print 'Postman connection down'
           self.ws = None
+        else:
+          print result
 
       except:
         print 'No connection'
@@ -53,7 +59,7 @@ class Postman():
 
     return self.ws
 
-queue = Queue.Queue()
+queue = Queue.LifoQueue()
 postman = Postman()
 postman.start()
 
@@ -61,7 +67,7 @@ class SassBunny(sublime_plugin.EventListener):
   pending = 0
   extension = re.compile(r'.*\.(.*)$', re.IGNORECASE)
   last_folder = re.compile(r'.*\/(.*)$', re.IGNORECASE)
-  supported_file_types = ["css", "scss", "sass", "less"]
+  supported_file_types = ["css", "scss"]
   delay = 25
   instant = True
   
@@ -93,17 +99,17 @@ class SassBunny(sublime_plugin.EventListener):
     if extension in self.supported_file_types:
       text         = view.substr(sublime.Region(0, view.size()))  
       project_name = self.project_folder(view.window().folders()[0])
-      file_name    = view.file_name()
+      file_name    = view.file_name() 
 
       queue.put({
         'event' : "update",
         'data' : {
-          'text': text, 
+          'text': text,   
           'project_name': project_name, 
           'file_name': file_name
         }
       })
-
+      
       sublime.status_message("[SASSY BUNNY] %s" % file_name)
 
       

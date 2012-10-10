@@ -16,14 +16,19 @@ class Postman():
       if result == None:
         print 'Postman connection down'
         self.ws = None
+      else:
+        self.retry_count = 0
 
     except:
       print 'No connection'
       self.ws = None
 
+      print self.retry_count
+
       if (self.retry_count < 2):
+        self.retry_count = self.retry_count + 1
+
         self.process_msg(msg)
-        self.retry_count += 1
 
   def worker(self):
     while True:
@@ -50,7 +55,6 @@ class Postman():
 
     if self.ws != None:
       print 'Postman connected' 
-      self.retry_count = 0
 
 
   def socket(self):

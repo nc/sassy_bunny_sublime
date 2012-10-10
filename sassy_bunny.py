@@ -3,6 +3,28 @@ import sublime, sublime_plugin, functools, httplib, urllib, re, threading, webso
 class Postman(): 
   host = "localhost:4567"
   ws = None
+  retry_count = 0
+
+  def process_msg(self, msg):
+    msg_json = json.dumps(msg)
+
+    try:
+      self.socket().send(msg_json)
+
+      result = self.socket().recv()
+
+      if result == None:
+        print 'Postman connection down'
+        self.ws = None
+
+    except:
+      print 'No connection'
+      self.ws = None
+
+      if (retry_count < 2):
+        self.process_msg(msg)
+        retry_count += 1
+
   def worker(self):
     while True:
       msg = queue.get()
@@ -12,20 +34,7 @@ class Postman():
           while (len(queue.queue) > 0):
             queue.queue.pop()
 
-      msg_json = json.dumps(msg)
-
-      try:
-        self.socket().send(msg_json)
-
-        result = self.socket().recv()
-
-        if result == None:
-          print 'Postman connection down'
-          self.ws = None
-
-      except:
-        print 'No connection'
-        self.ws = None
+      self.process_msg(msg)
 
       queue.task_done()
 
@@ -41,6 +50,8 @@ class Postman():
 
     if self.ws != None:
       print 'Postman connected' 
+      retry_count = 0
+
 
   def socket(self):
     try:
@@ -63,7 +74,7 @@ class SassBunny(sublime_plugin.EventListener):
   pending = 0
   extension = re.compile(r'.*\.(.*)$', re.IGNORECASE)
   last_folder = re.compile(r'.*\/(.*)$', re.IGNORECASE)
-  supported_file_types = ["css", "scss"]
+  supported_file_types = ["css", "scss", "sass", "less"]
   delay = 25
   instant = True
   

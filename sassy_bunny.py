@@ -79,8 +79,7 @@ class SassBunny(sublime_plugin.EventListener):
   extension = re.compile(r'.*\.(.*)$', re.IGNORECASE)
   last_folder = re.compile(r'.*\/(.*)$', re.IGNORECASE)
   supported_file_types = ["css", "scss", "sass", "less"]
-  delay = 25
-  instant = True
+  current_window = None
   
   def handle_timeout(self, view):
     self.pending = self.pending - 1
@@ -90,13 +89,10 @@ class SassBunny(sublime_plugin.EventListener):
       self.on_idle(view)
 
   def on_modified(self, view):
-    if self.instant:
-      self.post_changes(view)
+    extension = self.file_extension(view.file_name())
 
-    else:
-      self.pending = self.pending + 1
-      # Ask for handleTimeout to be called in 1000ms
-      sublime.set_timeout(functools.partial(self.handle_timeout, view), self.delay)
+    if extension in self.supported_file_types:
+      self.post_changes(view)
 
   def file_extension(self, file_name):
     return re.search(self.extension, file_name).group(1) 
@@ -107,21 +103,25 @@ class SassBunny(sublime_plugin.EventListener):
   def post_changes(self, view):
     extension = self.file_extension(view.file_name())
 
-    if extension in self.supported_file_types:
-      text         = view.substr(sublime.Region(0, view.size()))  
-      project_name = self.project_folder(view.window().folders()[0])
-      file_name    = view.file_name() 
+    if view.window() == None: 
+      self.current_window = view.active_window()
+    else:
+      self.current_window = view.window()
 
-      queue.put({
-        'event' : "update",
-        'data' : {
-          'text': text,   
-          'project_name': project_name, 
-          'file_name': file_name
-        }
-      })
-      
-      sublime.status_message("[SASSY BUNNY] %s" % file_name)
+    text         = view.substr(sublime.Region(0, view.size()))  
+    project_name = self.project_folder(self.current_window.folders()[0])
+    file_name    = view.file_name() 
+
+    queue.put({
+      'event' : "update",
+      'data' : {
+        'text': text,   
+        'project_name': project_name, 
+        'file_name': file_name
+      }
+    })
+    
+    sublime.status_message("[SASSY BUNNY] %s" % file_name)
 
       
   def on_save(self, view):

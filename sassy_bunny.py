@@ -1,7 +1,7 @@
 import sublime, sublime_plugin, functools, httplib, urllib, re, threading, websocket, json, Queue, traceback;
 
 class Postman(): 
-  host = "localhost:4567"
+  host = "localhost:48626"
   ws = None
   retry_count = 0
 

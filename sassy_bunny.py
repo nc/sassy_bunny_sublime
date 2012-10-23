@@ -55,6 +55,7 @@ class Postman():
 
     if self.ws != None:
       print 'Postman connected' 
+      self.socket().send(json.dumps({'event' : 'identify'}))
 
 
   def socket(self):

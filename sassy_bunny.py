@@ -1,7 +1,7 @@
 import sublime, sublime_plugin, functools, httplib, urllib, re, threading, websocket, json, Queue, traceback;
 
 class Postman(): 
-  host = "localhost:4567"
+  host = "localhost:48626"
   ws = None
   retry_count = 0
 
@@ -55,6 +55,7 @@ class Postman():
 
     if self.ws != None:
       print 'Postman connected' 
+      self.socket().send(json.dumps({'event' : 'identify'}))
 
 
   def socket(self):
@@ -102,21 +103,13 @@ class SassBunny(sublime_plugin.EventListener):
 
   def post_changes(self, view):
     extension = self.file_extension(view.file_name())
-
-    if view.window() == None: 
-      self.current_window = view.active_window()
-    else:
-      self.current_window = view.window()
-
     text         = view.substr(sublime.Region(0, view.size()))  
-    project_name = self.project_folder(self.current_window.folders()[0])
     file_name    = view.file_name() 
 
     queue.put({
       'event' : "update",
       'data' : {
         'text': text,   
-        'project_name': project_name, 
         'file_name': file_name
       }
     })

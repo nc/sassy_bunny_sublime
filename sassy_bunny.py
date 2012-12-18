@@ -51,7 +51,7 @@ class Postman():
   def reconnect(self):
     print 'Postman reconnecting'
 
-    self.ws = websocket.create_connection("ws://%s" % self.host)
+    self.ws = websocket.create_connection("ws://%s/websocket" % self.host)
 
     if self.ws != None:
       print 'Postman connected' 

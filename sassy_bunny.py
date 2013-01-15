@@ -122,7 +122,7 @@ class SassBunny(sublime_plugin.EventListener):
       }
     })
     
-    sublime.status_message("[SASSY BUNNY] %s" % file_name)
+    sublime.status_message("[TAKANA] %s" % file_name)
 
       
   def on_save(self, view):
